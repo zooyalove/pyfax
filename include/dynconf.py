@@ -3,7 +3,7 @@
 
 import sys
 import func
-import DynamicConfig
+from DynamicConfig import DynamicConfig
 
 if len(sys.argv) == 1:
     print("%s device CallID1 CallIDn ..." % sys.argv[0])
