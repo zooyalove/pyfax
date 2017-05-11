@@ -11,7 +11,7 @@ def strip_sipinfo(callid):
         callid = matches
     return callid
 
-def faxlog(logText, echo):
+def faxlog(logText, echo=False):
     echo = True if echo else False
 
     client = MongoClient('localhost', 27017)

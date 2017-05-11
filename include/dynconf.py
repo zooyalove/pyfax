@@ -18,12 +18,12 @@ if len(sys.argv) > 2:
     else:
         callid1 = func.strip_sipinfo(sys.argv[2])
 
-print("CallID1 : %s" % callid1)
+    print("CallID1 : %s" % callid1)
 
-func.faxlog("dynconf> checking CallID1 {0} on device {1}".format(callid1, device), True)
+    func.faxlog("dynconf> checking CallID1 {0} on device {1}".format(callid1, device), True)
 
-dc = DynamicConfig()
+    dc = DynamicConfig()
 
-if dc.lookup(device, callid1):
-    func.faxlog("dynconf> rejecting {0} on device {1}".format(callid1, device), True)
-    print("RejectCall: true")
+    if dc.lookup(device, callid1):
+        func.faxlog("dynconf> rejecting {0} on device {1}".format(callid1, device), True)
+        print("RejectCall: true")
