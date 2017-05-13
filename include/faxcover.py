@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os
+import sys
 import getopt
 import constant
 import func
 
-options = getopt.getopt("t:c:p:l:m:z:r:v:x:C:D:L:N:V:X:s:f:n:M:")
+opts, args = getopt.getopt(sys.argv[1:], "t:c:p:l:m:z:r:v:x:C:D:L:N:V:X:s:f:n:M:")
+
+options = {}
+for opt, arg in opts:
+    opt = opt.replace("-", "")
+    options = options + {opt: arg}
 
 if not options['f'] or not options['n']:
     exit("""

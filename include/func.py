@@ -2,6 +2,15 @@ import re
 import datetime
 from pymongo import MongoClient
 
+def isset(var):
+    try:
+        var
+    except NameError:
+        var = None
+    
+    if var is None:
+        return False
+    return True
 
 def strip_sipinfo(callid):
     comp = re.compile(r"^(.*)@(.*)$")
@@ -23,3 +32,7 @@ def faxlog(logText, echo=False):
 
     if echo:
         print(logText)
+
+def clean_faxnum(fnum):
+    res = re.sub(r"[^\+\w]", "", fnum)
+    return res
