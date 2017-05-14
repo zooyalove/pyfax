@@ -1,7 +1,11 @@
-from pymongo import MongoClient
+from MongoDB import MongoDB
 
-class AFAddressBook(object):
+
+class AFAddressBook(MongoDB):
+
     def __init__(self):
+        super(MongoDB, self).__init__()
+
         self._error = ""
 
     def create(self, companyname):
@@ -34,5 +38,23 @@ class AFAddressBook(object):
     def get_company(self):
         pass
 
-    def get_error(self):
+    def load_vals(self, data):
+        pass
+
+    def create_faxnumid(self, faxnumber):
+        pass
+
+    def delete_companyfaxids(self, cid):
+        pass
+
+    def delete_faxnumid(self, abookfax_id):
+        pass
+
+    def loadbyfaxnumid(self, abookfax_id):
+        pass
+
+    def loadbyfaxnum(self, faxnumber, mult):
+        pass
+
+    def reassign(self, newcid):
         pass

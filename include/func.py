@@ -2,6 +2,8 @@ import re
 import datetime
 from pymongo import MongoClient
 
+import constant
+
 def isset(var):
     try:
         var
@@ -36,3 +38,6 @@ def faxlog(logText, echo=False):
 def clean_faxnum(fnum):
     res = re.sub(r"[^\+\w]", "", fnum)
     return res
+
+def get_admin_email():
+    return constant.ADMIN_EMAIL

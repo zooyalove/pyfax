@@ -6,6 +6,7 @@ from os import path
 import re
 
 import func
+from AFAddressBook import AFAddressBook
 
 argc = len(sys.argv)
 
@@ -24,7 +25,7 @@ nextTry = sys.argv[4] if argc >= 5 else None
 if not path.exists(qfile):
     sys.exit("{0} doesn't exist".format(qfile))
 
-func.faxlog("notify> Executing: {0} {1} {2} {3} ({4})".format(qfile, why, jobtime, nextTry), True)
+func.faxlog("notify> Executing: {0} {1} {2} {3} ({4})".format(qfile, why, jobtime, nextTry, argc), True)
 
 faxdone = False
 fatal = False
@@ -37,7 +38,7 @@ elif why == "blocked" or why == "requeued":
 else:
     fatal = True
 
-file_data = file(qfile)
+file_data = open(qfile)
 faxfiles = []
 file_cnt = 0
 
@@ -90,3 +91,31 @@ for line in file_data:
 if not to_company:
     to_company = external
 
+addressbook = AFAddressBook()
+mult = []
+
+if addressbook.loadbyfaxnum(external, mult):
+    if mult[0]:
+        cid = 0
+        func.faxlog("notify> Found fax number with multiple companies", True)
+    else:
+        cid = addressbook.get_companyid()
+        addressbook.inc_faxto()
+else:
+    if addressbook.create(to_company):
+        if addressbook.create_faxnumid(external):
+            addressbook.save_settings({'description': None, 'faxcatid': None, 'to_person': to_person, 'to_location': to_location, 'to_voicenumber': to_voice})
+
+            cid = addressbook.get_companyid()
+            addressbook.inc_faxto()
+            func.faxlog("notify> Created company '{0}' with cid '{1}'".format(external, cid), True)
+        else:
+            cid = 0
+            func.faxlog("notify> FAILED to create faxnumid for '{0}' - {1}".format(external, addressbook.get_error()), True)
+    else:
+        cid =0
+        func.faxlog("notify> FAILED to create company '{0}' - {1}".format(external, addressbook.get_error()), True)
+
+from_email = func.get_admin_email()
+
+user_id = 0

@@ -2,6 +2,7 @@ import pymongo
 
 from MongoDB import MongoDB
 
+
 class DynamicConfig(MongoDB):
     """DynamicConfig class
     """
