@@ -12,5 +12,10 @@ class MongoDB(object):
         self._client.close()
         self._error = None
 
+        self.close()
+
+    def close(self):
+        pass
+
     def get_error(self):
         return self._error

@@ -2,11 +2,16 @@
 # -*- coding: utf-8 -*-
 
 import sys
-from os import path
 import re
+import os
+from os import path
+from datetime import datetime
 
 import func
+import constant
 from AFAddressBook import AFAddressBook
+from AFUserAccount import AFUserAccount
+from lang import LANG
 
 argc = len(sys.argv)
 
@@ -33,7 +38,7 @@ alert = False
 
 if why == "done":
     faxdone = True
-elif why == "blocked" or why == "requeued":
+elif why in ["blocked", "requeued"]:
     alert = True
 else:
     fatal = True
@@ -41,6 +46,19 @@ else:
 file_data = open(qfile)
 faxfiles = []
 file_cnt = 0
+
+totpages = None
+status = None
+external = None
+jobid = None
+mailaddr = None
+groupid = None
+to_location = None
+to_voice = None
+to_person = None
+to_company = None
+regarding = None
+owner = None
 
 for line in file_data:
     line = line.strip()
@@ -113,9 +131,56 @@ else:
             cid = 0
             func.faxlog("notify> FAILED to create faxnumid for '{0}' - {1}".format(external, addressbook.get_error()), True)
     else:
-        cid =0
+        cid = 0
         func.faxlog("notify> FAILED to create company '{0}' - {1}".format(external, addressbook.get_error()), True)
 
 from_email = func.get_admin_email()
+to_email = ""
 
+user = AFUserAccount()
 user_id = 0
+
+if owner == constant.FAXMAILUSER or owner == constant.WWWUSER:
+    if user.loadbyemail(mailaddr):
+        owner = user.username
+        to_email = user.email
+        user_id = user.get_uid()
+    else:
+        to_email = mailaddr
+        func.faxlog("notify> Failed to load account for email '{0}' - {1}".format(mailaddr, user.get_error()), True)
+else:
+    if not user.load_username(owner):
+        to_email = mailaddr
+        func.faxlog("notify> Failed to load account name '{0}' - {1}".format(owner, user.get_error()), True)
+    else:
+        to_email = user.email
+        user_id = user.get_uid()
+
+company = addressbook.get_company()
+if company:
+    pass
+else:
+    company = external
+
+# send confirmation email the fax to sender
+subject = "fax: {0} {1}".format(company, datetime.now().strftime(constant.EMAIL_DATE_FORMAT))
+text = "{0}: {1}".format(LANG['TO'], company)
+
+desc = addressbook.get_description()
+if desc:
+    text = text + ' ({0})'.format(desc)
+
+if regarding:
+    text = text + '\nRe: {0}\n'.format(regarding)
+
+# if fatal, notify sender
+if fatal:
+    subject = "{0} {1}".format(LANG['FAX_WHY'][why], subject)
+    text = "{0}: {1} {2}\n\n{3}".format(LANG['FAX_FAILED'], LANG['FAX_WHY'][why], status, text)
+
+    faxpath = path.join(constant.TMPDIR, '{0}{1}-{2}-{3}'.format(datetime.now().strftime('Y-m-d-'), external, datetime.now().strftime('His'), jobid))
+    os.makedirs(faxpath)
+
+    if func.convert2pdf(faxpath, faxfiles):
+        print("Emailing pdf file to %s" % to_email)
+        pdf_file = path.join(faxpath, constant.PDFNAME)

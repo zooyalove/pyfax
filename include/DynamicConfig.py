@@ -15,7 +15,7 @@ class DynamicConfig(MongoDB):
         self.device = None
         self.callid = None
 
-    def __del__(self):
+    def close(self):
         self.dynconf_id = None
         self.device = None
         self.callid = None

@@ -1,5 +1,6 @@
 import re
 import datetime
+from os import path
 from pymongo import MongoClient
 
 import constant
@@ -41,3 +42,23 @@ def clean_faxnum(fnum):
 
 def get_admin_email():
     return constant.ADMIN_EMAIL
+
+def convert2pdf(faxpath, faxfiles):
+    # GSCMD, TIFFPS, GSR
+    pdffile = path.join(faxpath, constant.PDFNAME)
+    tiffile = path.join(faxpath, constant.TIFFNAME)
+
+    convert_tiff = []
+    del_tif = []
+
+    convert_ps = None
+    coverpage = None
+    tmpcover = None
+    list_pdf = None
+    tmpps = None
+    tmptif = None
+
+    print("convert2pdf> starting")
+
+def send_mail(to_email, from_email, subject, text, file=None, altname=None, embedd=None, cc=None, bcc=None):
+    pass
