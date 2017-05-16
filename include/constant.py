@@ -11,7 +11,8 @@ HYLASPOOL = "/var/spool/hylafax"
 
 HYLATIFF2PS = False
 
-TMPDIR = path.join(INSTALLDIR, 'tmp')
+NOTIFY_INCLUDE_PDF = False
+NOTIFY_ON_SUCCESS = True
 
 ADMIN_EMAIL = 'root@localhost'
 
@@ -24,14 +25,10 @@ WWWUSER = "apache"
 EMAIL_DATE_FORMAT = "%d.%m.%Y %H:%M"
 
 SENDFAXFILETYPES = "PostScript (.ps), PDF (.pdf), TIFF (.tif), Text (.txt)"
-
 CONTACTFILETYPES = "vCard (.vcf)"
 
 MAX_UPLOAD_SIZE = '5M'
-
 MIN_PASSWD_SIZE = 8
-
-TIFFPS = path.join(BINARYDIR, 'tiff2ps') + ' -2ap'
 
 PAPERSIZE = 'a4'
 
@@ -51,3 +48,16 @@ PDFNAME = 'fax.pdf'
 TIFFNAME = 'fax.tif'
 PREVIMG = 'prev'
 PREVIMGSFX = '.gif'
+
+ARCHIVE = path.join(INSTALLDIR, 'faxes', 'recvd')
+ARCHIVE_SENT = path.join(INSTALLDIR, 'faxes', 'sent')
+TMPDIR = path.join(INSTALLDIR, 'tmp')
+PHONEBOOK = path.join(INSTALLDIR, 'pbook.phb')
+FAXCOVER = path.join(INSTALLDIR, 'include', 'faxcover.py')
+
+TIFFCP = path.join(BINARYDIR, 'tiffcp')
+TIFFCPG4 = TIFFCP + ' -c g4'
+TIFFPS = path.join(BINARYDIR, 'tiff2ps') + ' -2ap'
+TIFFSPLIT = path.join(BINARYDIR, 'tiffsplit')
+
+TIFF_TO_G4 = False

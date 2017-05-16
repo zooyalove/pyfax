@@ -2,8 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import sys
+
 import func
-from DynamicConfig import DynamicConfig
+from models import DynamicConfig
 
 if len(sys.argv) == 1:
     print("%s device CallID1 CallIDn ..." % sys.argv[0])

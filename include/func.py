@@ -1,5 +1,4 @@
-import re
-import datetime
+import re, datetime, html
 from os import path
 from pymongo import MongoClient
 
@@ -62,3 +61,9 @@ def convert2pdf(faxpath, faxfiles):
 
 def send_mail(to_email, from_email, subject, text, file=None, altname=None, embedd=None, cc=None, bcc=None):
     pass
+
+def pdf_preview(faxpath):
+    pass
+
+def decode_entity(description):
+    return html.unescape(description)

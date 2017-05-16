@@ -1,6 +1,6 @@
 import pymongo
 
-from MongoDB import MongoDB
+from . import MongoDB
 
 
 class DynamicConfig(MongoDB):

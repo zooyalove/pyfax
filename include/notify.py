@@ -1,17 +1,17 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-import re
 import os
-from os import path
+import re
+import sys
 from datetime import datetime
+from os import path
 
-import func
+
 import constant
-from AFAddressBook import AFAddressBook
-from AFUserAccount import AFUserAccount
+import func
 from lang import LANG
+from models import AFAddressBook, AFUserAccount, ArchiveOut
 
 argc = len(sys.argv)
 
@@ -178,9 +178,60 @@ if fatal:
     subject = "{0} {1}".format(LANG['FAX_WHY'][why], subject)
     text = "{0}: {1} {2}\n\n{3}".format(LANG['FAX_FAILED'], LANG['FAX_WHY'][why], status, text)
 
-    faxpath = path.join(constant.TMPDIR, '{0}{1}-{2}-{3}'.format(datetime.now().strftime('Y-m-d-'), external, datetime.now().strftime('His'), jobid))
+    faxpath = path.join(constant.TMPDIR, '{0}{1}-{2}-{3}'.format(datetime.now().strftime('%Y-%m-%d-'), external, datetime.now().strftime('%H%i%s'), jobid))
     os.makedirs(faxpath)
 
     if func.convert2pdf(faxpath, faxfiles):
         print("Emailing pdf file to %s" % to_email)
         pdf_file = path.join(faxpath, constant.PDFNAME)
+        func.send_mail(to_email, from_email, subject, text, pdf_file, external+".pdf")
+        os.unlink(pdf_file)
+        os.rmdir(faxpath)
+    else:
+        func.faxlog("notify> FAILED to create PDF for failed fax", True)
+        func.send_mail(to_email, from_email, subject, text+"\nFAILED to create PDF for failed fax")
+    sys.exit()
+
+if alert:
+    subject = "Fax {0} {1} {2} {3}".format(groupid, LANG['TO'], external, LANG['FAX_WHY'][why])
+    text = "{0} {1}\n\n{2}".format(LANG['FAX_WHY'][why], status, text)
+
+    if nextTry:
+        text += "\nFAX -> {0}".format(nextTry)
+    func.send_mail(to_email, from_email, subject, text)
+    sys.exit()
+
+if not faxdone:
+    sys.exit()
+
+now = datetime.now()
+faxpath = path.join(constant.ARCHIVE_SENT, now.year, now.month, now.day, external, now.strftime("%H%i%s"), jobid)
+os.makedirs(faxpath)
+
+if func.convert2pdf(faxpath, faxfiles):
+    pdf_file = path.join(faxpath, constant.PDFNAME)
+    thumbnail = path.join(faxpath, constant.THUMBNAIL)
+
+    func.pdf_preview(faxpath)
+
+    outbox = ArchiveOut()
+    if outbox.create(faxpath, user_id, cid, external, totpages):
+        text += "\nFax ID: {0}\n{1}: {2}\n".format(outbox.get_fid(), LANG['PN_PAGES'], totpages)
+        if regarding:
+            regarding = func.decode_entity(regarding)
+            outbox.set_note(regarding, None, user_id)
+    else:
+        func.faxlog("notify> FAILED to add Sent fax '{0}' to ArchiveOut".format(faxpath), True)
+
+    if constant.NOTIFY_ON_SUCCESS:
+        func.send_mail(to_email, from_email, subject, "Fax: OK\n\n"+text, pdf_file if constant.NOTIFY_INCLUDE_PDF else None,
+                       external+'.pdf' if constant.NOTIFY_INCLUDE_PDF else None, None if constant.NOTIFY_INCLUDE_PDF else thumbnail)
+        func.faxlog("notify> Notification email sent to "+to_email, True)
+    else:
+        func.faxlog("notify> Skipping notification email to {0} as per config setting NOTIFY_ON_SUCCESS".format(to_email), True)
+else:
+    func.faxlog("notify> FAILED to create PDF for Archive", True)
+    func.send_mail(to_email, from_email, subject, "Fax: OK\nFailed to create PDF for Archive\n\n"+text)
+
+print("Done")
+sys.exit()

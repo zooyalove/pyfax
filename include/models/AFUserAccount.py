@@ -1,4 +1,4 @@
-from MongoDB import MongoDB
+from . import MongoDB
 
 
 class AFUserAccount(MongoDB):
