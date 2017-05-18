@@ -49,84 +49,84 @@ class AFAddressBook(MongoDB):
 
     def get_faxnums(self):
         if not self._abook_id:
-            self._error = "No abook_id loaded"
+            self.set_error("(.+)*")
             return None
 
         return self.__addressbookfax.find({'abook_id': self._abook_id})
 
     def get_faxnumber(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array['faxnumber']
 
     def get_description(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('description', None)
 
     def get_category(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('faxcatid', None)
 
     def get_printer(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('printer', None)
 
     def get_faxnumid(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array['abookfax_id']
 
     def get_email(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('email', None)
 
     def get_faxfrom(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('faxfrom', None)
 
     def get_faxto(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('faxto', None)
 
     def get_to_person(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('to_person', None)
 
     def get_to_location(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('to_location', None)
 
     def get_to_voicenumber(self):
         if not self._fax_array.get('abookfax_id', None):
-            self._error = "No abook_id loaded"
+            self.set_error("No abook_id loaded")
             return False
 
         return self._fax_array.get('to_voicenumber', None)

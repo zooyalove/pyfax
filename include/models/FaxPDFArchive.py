@@ -1,3 +1,6 @@
+from datetime import datetime
+
+import func, constant
 from . import MongoDB
 
 
@@ -22,9 +25,21 @@ class FaxPDFArchive(MongoDB):
         self._collection = self._db['faxarchives']
         self._dbdata = {}
 
+    def get_faxcatid(self):
+        if not self._dbdata.get('fid', False):
+            self.set_error("No fid loaded")
+            return False
+
+        return self._dbdata['faxcatid']
+
+    def get_num_faxes(self, devices, faxcats):
+        self.viewable_devices(devices, faxcats)
+        res = self._collection.find({'inbox': True})
+        return res.count()
+
     def get_userid(self):
         if not self._dbdata.get('fid', False):
-            self._error = "No fid loaded"
+            self.set_error("No fid loaded")
             return False
 
         return self._dbdata['userid']
@@ -77,5 +92,51 @@ class FaxPDFArchive(MongoDB):
     def get_lastmoddate(self):
         return self._m_lastmoddate
 
+    def set_category(self, catid, userid):
+        if not self._dbdata.get('fid', False):
+            self.set_error("No fid loaded")
+            return False
+
+        self._dbdata['faxcatid'] = catid
+        self._dbdata['lastmoduser'] = userid
+
+        return self._collection.update_one({'_id': self._dbdata['fid']}, {'faxcatid': self._dbdata['faxcatid'], 'lastmoduser': self._dbdata['lastmoduser']})
+
+    def remove_category(self, catid):
+        if not catid:
+            self.set_error("No valid catid sent")
+            return False
+
+        return self._collection.update_many({'faxcatid': catid}, {'faxcatid': None})
+
     def set_note(self, description, category, userid):
-        pass
+        if not self._dbdata.get('fid', False):
+            self.set_error("No fid loaded")
+            return False
+
+        self._dbdata['faxcatid'] = category
+        self._dbdata['description'] = description
+        self._dbdata['lastmoduser'] = userid
+        self._dbdata['lastmoddate'] = datetime.utcnow()
+
+        self._collection.update_one({'_id': self._dbdata['fid']}, {'faxcatid': self._dbdata['faxcatid'], 'description': self._dbdata['description'], 'lastmoduser': self._dbdata['lastmoduser'], 'lastmoddate': self._dbdata['lastmoddate']})
+
+        func.faxlog("FaxArchive> userid '{0}' has changed description for faxid '{1}' to '{2}'".format(userid, self._dbdata['fid'], self._dbdata['description']))
+        return True
+
+    def viewable_devices(self, devices, faxcats):
+        myroutes = []
+        mycategories = []
+
+        if type(devices) is list:
+            for device in devices:
+                if device == '':
+                    continue
+
+                if constant.ENABLE_DID_ROUTING:
+                    myroutes.append("didr_id = " + device)
+                else:
+                    myroutes.append("modemdev = " + device)
+
+        self.__sqlroutes = len(myroutes)
+

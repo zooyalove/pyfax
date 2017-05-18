@@ -157,9 +157,7 @@ else:
         user_id = user.get_uid()
 
 company = addressbook.get_company()
-if company:
-    pass
-else:
+if not company:
     company = external
 
 # send confirmation email the fax to sender

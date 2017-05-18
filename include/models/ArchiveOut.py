@@ -29,7 +29,7 @@ class ArchiveOut(FaxPDFArchive):
         if res:
             self._dbdata['fid'] = res.inserted_id
         else:
-            self._error = 'No fid created'
+            self.set_error("No fid created")
             func.faxlog("class ArchiveOut> Fax not inserted into database for faxpath '{0}'".format(self.faxpath))
             return False
 

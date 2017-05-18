@@ -58,7 +58,7 @@ class DynamicConfig(MongoDB):
         rule = {'$and': [{'callid': callid}, {'device': device}]}
 
         if self._collection.find(rule):
-            self._error = "Rule exists"
+            self.set_error("Rule exists")
             return False
 
         result = self._collection.insert_one({'callid': callid, 'device': device})
@@ -66,12 +66,12 @@ class DynamicConfig(MongoDB):
             self.dynconf_id = result.inserted_id
             return True
 
-        self._error = "Rule not created"
+        self.set_error("Rule not created")
         return False
 
     def load_rule(self, dc_id):
         if not dc_id:
-            self._error = "DynConf not selected"
+            self.set_error("DynConf not selected")
             return False
 
         data = self._collection.find_one({'_id': dc_id})
@@ -81,12 +81,12 @@ class DynamicConfig(MongoDB):
             self.callid = data['callid']
             return True
 
-        self._error = "Rule" + dc_id + " doesn't exist"
+        self.set_error("Rule" + dc_id + " doesn't exist")
         return False
 
     def save_rule(self, device, callid):
         if not self.dynconf_id:
-            self._error = "DynConf not loaded"
+            self.set_error("DynConf not loaded")
             return False
 
         self.device = device
