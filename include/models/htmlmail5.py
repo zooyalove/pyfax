@@ -1,6 +1,5 @@
-import abc, base64
+import abc, base64, re
 from os import path
-
 
 import func
 
@@ -10,28 +9,28 @@ MAIL_MIMEPART_CRLF = None
 
 
 class Attachment(object):
-    def __init__(self, data, name, contentType, encoding):
+    def __init__(self, data, name, content_type, encoding):
         self.data = data
         self.name = name
-        self.contentType = contentType
+        self.content_type = content_type
         self.encoding = encoding
 
 
 class FileAttachment(Attachment):
-    def __init__(self, filename, contentType='application/octet-stream', altName=None, encoding=None):
+    def __init__(self, filename, content_type='application/octet-stream', altName=None, encoding=None):
         encoding = Base64Encoding() if encoding is None else encoding
 
         if not altName:
             altName = path.basename(filename)
 
-        super(Attachment, self).__init__(open(filename).read(1000), altName, contentType, encoding)
+        Attachment.__init__(self, func.file_get_contents(filename), altName, content_type, encoding)
 
 
 class StringAttachment(Attachment):
-    def __init__(self, data, name='', contentType='application/octet-stream', encoding=None):
+    def __init__(self, data, name='', content_type='application/octet-stream', encoding=None):
         encoding = Base64Encoding() if encoding is None else encoding
 
-        super(Attachment, self).__init__(data, name, contentType, encoding)
+        Attachment.__init__(self, data, name, content_type, encoding)
 
 
 class FileEmbeddedImage(FileAttachment):
@@ -105,8 +104,8 @@ class HtmlMimeMail5(object):
                               'tiff': 'image/tiff',
                               'swf': 'application/x-shockwave-flash'}
 
-        self.__build_params = {'html_encoding': base64,
-                               'text_encoding': base64,
+        self.__build_params = {'html_encoding': Base64Encoding(),
+                               'text_encoding': Base64Encoding(),
                                'html_charset': 'UTF-8',
                                'text_charset': 'UTF-8',
                                'head_charset': 'UTF-8',
@@ -131,4 +130,105 @@ class HtmlMimeMail5(object):
 
         # protected property
         self._errors = ""
+
+    def setCRLF(self, crlf='\n'):
+        global CRLF, MAIL_MIMEPART_CRLF
+
+        if CRLF is None:
+            CRLF = crlf
+
+        if MAIL_MIMEPART_CRLF is None:
+            MAIL_MIMEPART_CRLF = crlf
+
+    def setSMTPParams(self, host=None, port=None, helo=None, auth=None, user=None, password=None):
+        pass
+
+    def setSendmailPath(self, spath):
+        self.__sendmail_path = spath
+
+    def setTextEncoding(self, encoding):
+        self.__build_params['text_encoding'] = encoding
+
+    def setHTMLEncoding(self, encoding):
+        self.__build_params['html_encoding'] = encoding
+
+    def setTextCharset(self, charset='ISO-8859-1'):
+        self.__build_params['text_charset'] = charset
+
+    def setHTMLCharset(self, charset='ISO-8859-1'):
+        self.__build_params['html_charset'] = charset
+
+    def setHeadCharset(self, charset='ISO-8859-1'):
+        self.__build_params['head_charset'] = charset
+
+    def setTextWrap(self, count=998):
+        self.__build_params['text_wrap'] = count
+
+    def setHeader(self, name, value):
+        self.__headers[name] = value
+
+    def setSubject(self, subject):
+        self.__headers['Subject'] = subject
+
+    def setFrom(self, from_email):
+        self.__headers['From'] = from_email
+
+    def setPriority(self, priority='normal'):
+        p = priority.lower()
+        if p in ['high', '1']:
+            self.__headers['X-Priority'] = '1'
+            self.__headers['X-MSMail-Priority'] = 'High'
+        elif p in ['normal', '3']:
+            self.__headers['X-Priority'] = '3'
+            self.__headers['X-MSMail-Priority'] = 'Normal'
+        elif p in ['low', '5']:
+            self.__headers['X-Priority'] = '5'
+            self.__headers['X-MSMail-Priority'] = 'Low'
+        else:
+            pass
+
+    def setReturnPath(self, return_path):
+        self.__return_path = return_path
+
+    def setCc(self, cc):
+        self.__headers['Cc'] = cc
+
+    def setBcc(self, bcc):
+        self.__headers['Bcc'] = bcc
+
+    def setText(self, text):
+        self.__text = text
+
+    def setHTML(self, html, images_dir=None):
+        self.__html = html
+
+        if images_dir:
+            self.findHtmlImages(images_dir)
+
+    def rebuild(self):
+        self.__is_built = False
+
+    def findHtmlImages(self, images_dir):
+        extensions = self.__image_types.keys()
+        html_images = []
+
+        match = re.match(r'(?:"|\'){[^"\']+\.(%s))(?:"|\')' % '|'.join(extensions), self.__html, re.U|re.I)
+        groups = match.groups()
+
+        for m in groups:
+            if path.exists(images_dir + m):
+                html_images.append(m)
+                self.__html = self.__html.replace(m , path.basename(m))
+
+        if not html_images:
+            html_images = list(set(html_images))
+            html_images.sort()
+
+            for img in html_images:
+                image = func.file_get_contents(images_dir+img)
+                if image:
+                    ext = re.sub(r"#^.*\.(\w{3,4})$#", r'"\1".lower()', img, re.X)
+                    content_type = self.__image_types[ext]
+                    self.addEmbeddedImage(StringEmbeddedImage(image, path.basename(img), content_type))
+
 

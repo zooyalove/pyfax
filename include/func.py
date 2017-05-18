@@ -25,6 +25,20 @@ def tmpfilename(suffix):
     return path.join(constant.TMPDIR, 'avantfax-'+genpasswd()+'.'+suffix)
 
 
+def file_get_contents(filename):
+    """
+    파일을 읽어들여 문자열 형태로 반환. 만약에 읽기 실패할 경우 False값을 반환한다.
+    :param filename: 
+    :return: string or False 
+    """
+    try:
+        ret = open(filename).read()
+    except:
+        ret = False
+
+    return ret
+
+
 def isset(var):
     try:
         var
@@ -164,7 +178,7 @@ def convert2pdf(faxpath, convertfiles):
 def new_mailer(from_email, subject, text):
     mailer = Mailer()
 
-    from_address = re.sub(r"(.*?) <(.*?)>", '$2', from_email)
+    from_address = re.sub(r"(.*?) <(.*?)>", '$2', from_email, flags=re.I)
 
     return mailer
 
