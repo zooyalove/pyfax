@@ -43,7 +43,9 @@ elif why in ["blocked", "requeued"]:
 else:
     fatal = True
 
-file_data = open(qfile)
+with open(qfile) as fp:
+    file_data = fp.read()
+
 faxfiles = []
 file_cnt = 0
 
@@ -203,7 +205,7 @@ if not faxdone:
     sys.exit()
 
 now = datetime.now()
-faxpath = path.join(constant.ARCHIVE_SENT, now.year, now.month, now.day, external, now.strftime("%H%i%s"), jobid)
+faxpath = path.join(constant.ARCHIVE_SENT, str(now.year), str(now.month), str(now.day), external, now.strftime("%H%i%s"), jobid)
 os.makedirs(faxpath)
 
 if func.convert2pdf(faxpath, faxfiles):

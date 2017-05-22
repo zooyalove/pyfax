@@ -64,13 +64,20 @@ def faxlog(logText, echo=False):
 
     client = MongoClient('localhost', 27017)
     db = client['zyapp']
-    syslog = db.syslogs
+    syslog = db['syslogs']
     log = {"logtext": logText,
            "logdate": datetime.datetime.utcnow()}
     syslog.insert_one(log)
 
     if echo:
         print(logText)
+
+
+def sendmaillog(logtext):
+    log = logtext.replace('<', '&lt;')
+    log = log.replace('>', '&gt;')
+    log = log.replace('"', '&quot;')
+    faxlog("send_mail> "+log)
 
 
 def clean_faxnum(fnum):
@@ -175,15 +182,43 @@ def convert2pdf(faxpath, convertfiles):
     return ret
 
 
+def split_emails(emails):
+    emails = decode_entity(emails)
+    to_addy = emails.split(r'[;]')
+    to_addy = [ t.strip() for t in to_addy]
+
+    return to_addy
+
+
 def new_mailer(from_email, subject, text):
     mailer = Mailer()
 
-    from_address = re.sub(r"(.*?) <(.*?)>", '$2', from_email, flags=re.I)
+    mailer.setFrom(decode_entity(from_email))
+    mailer.setSubject(decode_entity(subject))
+    mailer.set_message(text)
 
     return mailer
 
-def send_mail(to_email, from_email, subject, text, file=None, altname=None, embedd=None, cc=None, bcc=None):
-    pass
+
+def send_mail(to_email, from_email, subject, text, file=None, altname=None, cc=None, bcc=None):
+    mailer = new_mailer(from_email, subject, text)
+    mailer.attach_file(file, altname)
+
+    if cc:
+        mailer.setCc(split_emails(cc))
+
+    if bcc:
+        mailer.setBcc(split_emails(bcc))
+
+    emails = split_emails(to_email)
+
+    if mailer.sendmail(emails):
+        sendmaillog("'%s' sent to '%s' from '%s' - %s (%s)" % (subject, to_email, from_email, file, altname))
+        return True
+
+    sendmaillog("FAILED to send '%s' to '%s' from '%s' - %s (%s)" % (subject, to_email, from_email,file, altname))
+    faxlog("send_mail> MAIL ERROR: %s" % mailer.get_error())
+    return False
 
 
 def pdf_preview(faxpath, quiet):

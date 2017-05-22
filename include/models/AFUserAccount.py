@@ -5,6 +5,9 @@ class AFUserAccount(MongoDB):
     def __init__(self):
         super(MongoDB, self).__init__()
 
+        self.username = ''
+        self.email = ''
+
     def get_uid(self):
         pass
 

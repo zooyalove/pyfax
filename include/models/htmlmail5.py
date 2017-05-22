@@ -1,249 +1,168 @@
-import abc, base64, re, hashlib, uuid, time
+# -*- coding:utf-8 -*-
+
+import mimetypes
 from os import path
 
-import func
-
-
-CRLF = None
-MAIL_MIMEPART_CRLF = None
-
-
-class Attachment(object):
-    def __init__(self, data, name, content_type, encoding):
-        self.data = data
-        self.name = name
-        self.content_type = content_type
-        self.encoding = encoding
-
-
-class FileAttachment(Attachment):
-    def __init__(self, filename, content_type='application/octet-stream', altName=None, encoding=None):
-        encoding = Base64Encoding() if encoding is None else encoding
-
-        if not altName:
-            altName = path.basename(filename)
-
-        Attachment.__init__(self, func.file_get_contents(filename), altName, content_type, encoding)
-
-
-class StringAttachment(Attachment):
-    def __init__(self, data, name='', content_type='application/octet-stream', encoding=None):
-        self.cid = None
-        encoding = Base64Encoding() if encoding is None else encoding
-
-        Attachment.__init__(self, data, name, content_type, encoding)
-
-
-class FileEmbeddedImage(FileAttachment):
-    pass
-
-
-class StringEmbeddedImage(StringAttachment):
-    pass
-
-
-class iEncoding(object, metaclass=abc.ABCMeta):
-    @abc.abstractmethod
-    def encode(self, inp):
-        raise NotImplementedError('users must define encode to use this base class')
-
-    @abc.abstractmethod
-    def get_type(self):
-        raise NotImplementedError('users must define get_type to use this base class')
-
-
-class Base64Encoding(iEncoding):
-    def encode(self, inp):
-        global CRLF, MAIL_MIMEPART_CRLF
-
-        return func.chunk_split(base64.b64encode(inp), MAIL_MIMEPART_CRLF if MAIL_MIMEPART_CRLF else '\r\n').rstrip()
-
-    def get_type(self):
-        return 'base64'
-
-
-class QPrintEncoding(iEncoding):
-    def encode(self, inp):
-        # inp = re.sub(r"([^\x20\x21-\x3C\x3E-\x7E\x0A\x0D])")
-        pass
-
-    def get_type(self):
-        return 'quoted-printable'
-
-
-class SevenBitEncoding(iEncoding):
-    def encode(self, inp):
-        return inp
-
-    def get_type(self):
-        return '7bit'
-
-
-class EightBitEncoding(iEncoding):
-    def encode(self, inp):
-        return inp
-
-    def get_type(self):
-        return '8bit'
+import smtplib
+from email.header import Header
+from email.utils import formatdate
+from email.mime.multipart import MIMEMultipart, MIMEBase
+from email.mime.image import MIMEImage
+from email.mime.text import MIMEText
+from email.mime.audio import MIMEAudio
+from email import encoders
 
 
 class HtmlMimeMail5(object):
     def __init__(self):
         # private property
         self.__html = None
-        self.__text = ""
-        self.__output = None
-        self.__html_images = []
-
-        self.__image_types = {'gif': 'image/gif',
-                              'jpg': 'image/jpeg',
-                              'jpeg': 'image/jpeg',
-                              'jpe': 'image/jpeg',
-                              'bmp': 'image/bmp',
-                              'png': 'image/png',
-                              'tif': 'image/tiff',
-                              'tiff': 'image/tiff',
-                              'swf': 'application/x-shockwave-flash'}
-
-        self.__build_params = {'html_encoding': Base64Encoding(),
-                               'text_encoding': Base64Encoding(),
-                               'html_charset': 'UTF-8',
-                               'text_charset': 'UTF-8',
-                               'head_charset': 'UTF-8',
-                               'text_wrap': 998}
+        self.__text = None
+        self.__output = MIMEMultipart()
 
         self.__attachments = []
 
-        helo = 'localhost'
-
+        self.__msg_users = {
+            'from': '',
+            'to': '',
+            'cc': '',
+            'bcc': ''
+        }
         self.__smtp_params = {'host': 'localhost',
                               'port': 25,
-                              'helo': helo,
                               'auth': False,
                               'username': '',
                               'password': ''}
 
-        self.__headers = {'MIME-Version': '1.0', 'X-Mailer': 'AvantFAX 3'}
-
         self.__is_built = False
-        self.__return_path = None
-        self.__sendmail_path = "/usr/lib/sendmail"
 
         # protected property
         self._errors = ""
 
-    def setCRLF(self, crlf='\n'):
-        global CRLF, MAIL_MIMEPART_CRLF
 
-        if CRLF is None:
-            CRLF = crlf
-
-        if MAIL_MIMEPART_CRLF is None:
-            MAIL_MIMEPART_CRLF = crlf
-
-    def setSMTPParams(self, host=None, port=None, helo=None, auth=None, user=None, password=None):
-        pass
-
-    def setSendmailPath(self, spath):
-        self.__sendmail_path = spath
-
-    def setTextEncoding(self, encoding):
-        self.__build_params['text_encoding'] = encoding
-
-    def setHTMLEncoding(self, encoding):
-        self.__build_params['html_encoding'] = encoding
-
-    def setTextCharset(self, charset='ISO-8859-1'):
-        self.__build_params['text_charset'] = charset
-
-    def setHTMLCharset(self, charset='ISO-8859-1'):
-        self.__build_params['html_charset'] = charset
-
-    def setHeadCharset(self, charset='ISO-8859-1'):
-        self.__build_params['head_charset'] = charset
-
-    def setTextWrap(self, count=998):
-        self.__build_params['text_wrap'] = count
+    def setSMTPParams(self, host='localhost', port=25, auth=False, user='', password=''):
+        self.__smtp_params = {'host': host,
+                            'port': port,
+                            'auth': auth,
+                            'username': user,
+                            'password': password}
 
     def setHeader(self, name, value):
-        self.__headers[name] = value
+        self.__output[name] = value
 
     def setSubject(self, subject):
-        self.__headers['Subject'] = subject
+        self.__output['Subject'] = Header(s=subject, charset='utf-8')
 
     def setFrom(self, from_email):
-        self.__headers['From'] = from_email
+        self.__msg_users['from'] = from_email
+        self.__output['From'] = from_email
 
-    def setPriority(self, priority='normal'):
-        p = priority.lower()
-        if p in ['high', '1']:
-            self.__headers['X-Priority'] = '1'
-            self.__headers['X-MSMail-Priority'] = 'High'
-        elif p in ['normal', '3']:
-            self.__headers['X-Priority'] = '3'
-            self.__headers['X-MSMail-Priority'] = 'Normal'
-        elif p in ['low', '5']:
-            self.__headers['X-Priority'] = '5'
-            self.__headers['X-MSMail-Priority'] = 'Low'
-        else:
-            pass
+    def setCc(self, cc_users):
+        self.__msg_users['cc'] = cc_users
+        self.__output['Cc'] = ', '.join(cc_users)
 
-    def setReturnPath(self, return_path):
-        self.__return_path = return_path
-
-    def setCc(self, cc):
-        self.__headers['Cc'] = cc
-
-    def setBcc(self, bcc):
-        self.__headers['Bcc'] = bcc
+    def setBcc(self, bcc_users):
+        self.__msg_users['bcc'] = bcc_users
+        self.__output['Bcc'] = ', '.join(bcc_users)
 
     def setText(self, text):
-        self.__text = text
+        self.__text = MIMEText(text, _charset='utf=8')
 
-    def setHTML(self, html, images_dir=None):
-        self.__html = html
-
-        if images_dir:
-            self.findHtmlImages(images_dir)
+    def setHTML(self, html):
+        self.__html = MIMEText(html, 'html', _charset='utf-8')
 
     def rebuild(self):
         self.__is_built = False
 
-    def findHtmlImages(self, images_dir):
-        extensions = self.__image_types.keys()
-        html_images = []
+    # def findHtmlImages(self, images_dir):
+    #     extensions = self.__image_types.keys()
+    #     html_images = []
+    #
+    #     match = re.match(r'(?:"|\'){[^"\']+\.(%s))(?:"|\')' % '|'.join(extensions), self.__html, re.U|re.I)
+    #     groups = match.groups()
+    #
+    #     for m in groups:
+    #         if path.exists(images_dir + m):
+    #             html_images.append(m)
+    #             self.__html = self.__html.replace(m , path.basename(m))
+    #
+    #     if not html_images:
+    #         html_images = list(set(html_images))
+    #         html_images.sort()
+    #
+    #         for img in html_images:
+    #             image = func.file_get_contents(images_dir+img)
+    #             if image:
+    #                 ext = re.sub(r"#^.*\.(\w{3,4})$#", r'"\1".lower()', img, re.I)
+    #                 content_type = self.__image_types[ext]
+    #                 self.addEmbeddedImage(StringEmbeddedImage(image, path.basename(img), content_type))
+    #
+    # def addEmbeddedImage(self, embedded_image):
+    #     embedded_image.cid = hashlib.md5(uuid.uuid1(int(time.time())))
+    #     self.__html_images.append(embedded_image)
 
-        match = re.match(r'(?:"|\'){[^"\']+\.(%s))(?:"|\')' % '|'.join(extensions), self.__html, re.U|re.I)
-        groups = match.groups()
+    def _addAttachment(self, filename, altname=None):
+        if not path.isfile(filename) or filename is None:
+            return False
 
-        for m in groups:
-            if path.exists(images_dir + m):
-                html_images.append(m)
-                self.__html = self.__html.replace(m , path.basename(m))
+        ctype, encoding = mimetypes.guess_type(filename)
+        if ctype is None or encoding is not None:
+            ctype = 'application/octet-stream'
 
-        if not html_images:
-            html_images = list(set(html_images))
-            html_images.sort()
+        maintype, subtype = ctype.split('/', 1)
 
-            for img in html_images:
-                image = func.file_get_contents(images_dir+img)
-                if image:
-                    ext = re.sub(r"#^.*\.(\w{3,4})$#", r'"\1".lower()', img, re.I)
-                    content_type = self.__image_types[ext]
-                    self.addEmbeddedImage(StringEmbeddedImage(image, path.basename(img), content_type))
+        if maintype == 'text':
+            with open(filename) as fp:
+                msg = MIMEText(fp.read(), _subtype=subtype)
+        elif maintype == 'image':
+            with open(filename, 'rb') as fp:
+                msg = MIMEImage(fp.read(), _subtype=subtype)
+        elif maintype == 'audio':
+            with open(filename, 'rb') as fp:
+                msg = MIMEAudio(fp.read(), _subtype=subtype)
+        else:
+            with open(filename, 'rb') as fp:
+                msg = MIMEBase(maintype, subtype)
+                msg.set_payload(fp.read())
+            encoders.encode_base64(msg)
 
-    def addEmbeddedImage(self, embedded_image):
-        embedded_image.cid = hashlib.md5(uuid.uuid1(int(time.time())))
-        self.__html_images.append(embedded_image)
+        msg.add_header('Content-Disposition', 'attachment; filename="%s"' % (path.basename(filename) if altname is None else altname))
 
-    def addAttachment(self, attachment):
-        self.__attachments.append(attachment)
+        self.__attachments.append(msg)
 
-    def addTextPart(self, message):
-        params = {}
-        params['content_type'] = 'text/plain'
-        params['encoding'] = self.__build_params['text_encoding'].get_type()
-        params['charset'] = self.__build_params['text_charset']
+        return True
 
-        if message:
-            message.addSubpart()
+    def _build(self, to_email):
+        if self.__is_built:
+            return True
+
+        self.__output['To'] = to_email
+        self.__output['Date'] = formatdate(localtime=True)
+
+        if len(self.__attachments) > 0:
+            for attachment in self.__attachments:
+                self.__output.attach(attachment)
+
+        self.__is_built = True
+        return True
+
+    def _send(self, to):
+        self._build(to)
+
+        s = smtplib.SMTP(self.__smtp_params['host'], self.__smtp_params['port'])
+
+        if self.__smtp_params['host'] != 'localhost':
+            if not self.__smtp_params['username'] or not self.__smtp_params['password']:
+                self._errors = "SMTP 유저아이디 혹은 SMTP 패스워드가 설정되어 있지 않습니다."
+                s.close()
+                return False
+
+            s.ehlo()
+            s.starttls()
+            s.ehlo()
+            s.login(self.__smtp_params['username'], self.__smtp_params['password'])
+
+        to_user = to + self.__msg_users['cc']
+        s.sendmail(self.__msg_users['from'], to_user, self.__output.as_string())
+        s.close()
+        return True

@@ -11,9 +11,6 @@ HYLASPOOL = "/var/spool/hylafax"
 
 HYLATIFF2PS = False
 
-NOTIFY_INCLUDE_PDF = False
-NOTIFY_ON_SUCCESS = True
-
 ENABLE_DID_ROUTING = False
 
 ADMIN_EMAIL = 'root@localhost'
@@ -81,3 +78,17 @@ ARCHIVE_SENT = path.join(INSTALLDIR, 'faxes', 'sent')
 TMPDIR = path.join(INSTALLDIR, 'tmp')
 PHONEBOOK = path.join(INSTALLDIR, 'pbook.phb')
 FAXCOVER = path.join(INSTALLDIR, 'include', 'faxcover.py')
+
+# email configure
+SYSTEM_EMAIL_SIG_HTML = "<a href='http://www.avantfax.com/'>AvantFAX</a>"
+SYSTEM_EMAIL_SIG_TEXT = "www.AvantFAX.com"
+
+USE_SMTPSERVER = False
+SMTP_SERVER = 'localhost'
+SMTP_PORT = 25
+SMTP_AUTH = False
+SMTP_USERNAME = ''
+SMTP_PASSWORD = ''
+
+NOTIFY_INCLUDE_PDF = False
+NOTIFY_ON_SUCCESS = True

@@ -139,4 +139,3 @@ class FaxPDFArchive(MongoDB):
                     myroutes.append("modemdev = " + device)
 
         self.__sqlroutes = len(myroutes)
-
