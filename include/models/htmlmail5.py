@@ -1,4 +1,4 @@
-import abc, base64, re
+import abc, base64, re, hashlib, uuid, time
 from os import path
 
 import func
@@ -28,6 +28,7 @@ class FileAttachment(Attachment):
 
 class StringAttachment(Attachment):
     def __init__(self, data, name='', content_type='application/octet-stream', encoding=None):
+        self.cid = None
         encoding = Base64Encoding() if encoding is None else encoding
 
         Attachment.__init__(self, data, name, content_type, encoding)
@@ -227,8 +228,22 @@ class HtmlMimeMail5(object):
             for img in html_images:
                 image = func.file_get_contents(images_dir+img)
                 if image:
-                    ext = re.sub(r"#^.*\.(\w{3,4})$#", r'"\1".lower()', img, re.X)
+                    ext = re.sub(r"#^.*\.(\w{3,4})$#", r'"\1".lower()', img, re.I)
                     content_type = self.__image_types[ext]
                     self.addEmbeddedImage(StringEmbeddedImage(image, path.basename(img), content_type))
 
+    def addEmbeddedImage(self, embedded_image):
+        embedded_image.cid = hashlib.md5(uuid.uuid1(int(time.time())))
+        self.__html_images.append(embedded_image)
 
+    def addAttachment(self, attachment):
+        self.__attachments.append(attachment)
+
+    def addTextPart(self, message):
+        params = {}
+        params['content_type'] = 'text/plain'
+        params['encoding'] = self.__build_params['text_encoding'].get_type()
+        params['charset'] = self.__build_params['text_charset']
+
+        if message:
+            message.addSubpart()
