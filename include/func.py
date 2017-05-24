@@ -28,7 +28,7 @@ def tmpfilename(suffix):
 def file_get_contents(filename):
     """
     파일을 읽어들여 문자열 형태로 반환. 만약에 읽기 실패할 경우 False값을 반환한다.
-    :param filename: 
+    :param filename: str
     :return: string or False 
     """
     try:
